@@ -1,0 +1,3 @@
+(library
+ (name mmbeam)
+ (libraries zarith))
