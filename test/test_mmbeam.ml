@@ -19,3 +19,67 @@ let () =
   match Mmbeam.Vm.get_y vm 0 with
   | Error Mmbeam.Vm.No_current_frame -> ()
   | _ -> failwith "the popped frame must no longer be accessible"
+
+
+let run vm program =
+  match Mmbeam.Vm.step vm program with
+  | Ok () -> ()
+  | Error _ -> failwith "instruction failed"
+
+let () =
+  let vm = Mmbeam.Vm.create () in
+  let program =
+    Mmbeam.Vm.load
+      [|
+        Mmbeam.Instruction.Load_int {
+          dst = 0;
+          value = Mmbeam.Int.of_int 40;
+        };
+        Mmbeam.Instruction.Load_int {
+          dst = 1;
+          value = Mmbeam.Int.of_int 2;
+        };
+        Mmbeam.Instruction.Add {
+          dst = 2;
+          left = 0;
+          right = 1;
+        };
+        Mmbeam.Instruction.Halt;
+      |]
+  in
+
+  run vm program;
+  run vm program;
+  run vm program;
+  run vm program;
+
+  match Mmbeam.Vm.get_x vm 2 with
+  | Ok (Some (Mmbeam.Type.Int (Mmbeam.Int.Small 42))) -> ()
+  | _ -> failwith "expected X(2) = 42"
+
+let () =
+  let vm = Mmbeam.Vm.create () in
+  let program =
+    Mmbeam.Vm.load
+      [|
+        Mmbeam.Instruction.Jump { label = 7 };
+        Mmbeam.Instruction.Load_int {
+          dst = 0;
+          value = Mmbeam.Int.of_int 0;
+        };
+        Mmbeam.Instruction.Label 7;
+        Mmbeam.Instruction.Load_int {
+          dst = 0;
+          value = Mmbeam.Int.of_int 42;
+        };
+        Mmbeam.Instruction.Halt;
+      |]
+  in
+  run vm program;
+  if Mmbeam.Vm.instruction_pointer vm <> 2 then
+    failwith "jump should target the label's array index";
+  run vm program;
+  run vm program;
+  match Mmbeam.Vm.get_x vm 0 with
+  | Ok (Some (Mmbeam.Type.Int (Mmbeam.Int.Small 42))) -> ()
+  | _ -> failwith "expected jump to execute the instruction after the label"
