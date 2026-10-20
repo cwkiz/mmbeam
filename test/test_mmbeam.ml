@@ -83,3 +83,49 @@ let () =
   match Mmbeam.Vm.get_x vm 0 with
   | Ok (Some (Mmbeam.Type.Int (Mmbeam.Int.Small 42))) -> ()
   | _ -> failwith "expected jump to execute the instruction after the label"
+
+let () =
+  let vm = Mmbeam.Vm.create () in
+  let program =
+    Mmbeam.Vm.load
+      [|
+        Mmbeam.Instruction.Call { label = 10; locals = 1 };
+        Mmbeam.Instruction.Halt;
+        Mmbeam.Instruction.Label 10;
+        Mmbeam.Instruction.Call { label = 20; locals = 2 };
+        Mmbeam.Instruction.Ret;
+        Mmbeam.Instruction.Label 20;
+        Mmbeam.Instruction.Ret;
+      |]
+  in
+  run vm program;
+  run vm program;
+  (match Mmbeam.Vm.set_y vm 0 (Mmbeam.Type.int 10) with
+  | Ok () -> ()
+  | Error _ -> failwith "outer call frame should have Y(0)");
+  run vm program;
+  (match Mmbeam.Vm.get_y vm 0 with
+  | Ok None -> ()
+  | _ -> failwith "nested call should have a fresh local frame");
+  run vm program;
+  (match Mmbeam.Vm.set_y vm 0 (Mmbeam.Type.int 20) with
+  | Ok () -> ()
+  | Error _ -> failwith "inner call frame should have Y(0)");
+  run vm program;
+  expect_some_int 10 (Mmbeam.Vm.get_y vm 0);
+  if Mmbeam.Vm.instruction_pointer vm <> 4 then
+    failwith "inner return should resume in the outer call";
+  run vm program;
+  if Mmbeam.Vm.instruction_pointer vm <> 1 then
+    failwith "outer return should resume after the outer call";
+  (match Mmbeam.Vm.current_frame vm with
+  | None -> ()
+  | Some _ -> failwith "all call frames should be popped after returning");
+  (match Mmbeam.Vm.continuation vm with
+  | None -> ()
+  | Some _ -> failwith "continuation should be restored after returning");
+  let no_continuation_vm = Mmbeam.Vm.create () in
+  let ret_program = Mmbeam.Vm.load [| Mmbeam.Instruction.Ret |] in
+  (match Mmbeam.Vm.step no_continuation_vm ret_program with
+  | Error Mmbeam.Vm.No_continuation -> ()
+  | _ -> failwith "Ret without an active call should fail")

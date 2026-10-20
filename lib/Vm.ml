@@ -119,9 +119,10 @@ let step vm program =
         set_instruction_pointer vm address;
         Ok ()
     | None -> Error (Unknown_label label))
-  | Instruction.Call { label } ->
+  | Instruction.Call { label; locals } ->
     (match Hashtbl.find_opt program.labels label with
     | Some address ->
+        push_frame vm ~locals;
         vm.cp <- Some (vm.ip + 1);
         set_instruction_pointer vm address;
         Ok ()
@@ -129,9 +130,11 @@ let step vm program =
   | Instruction.Ret ->
     (match vm.cp with
     | Some return_address ->
-        set_instruction_pointer vm return_address;
-        vm.cp <- None;
-        Ok ()
+        (match pop_frame vm with
+        | Error error -> Error error
+        | Ok () ->
+            set_instruction_pointer vm return_address;
+            Ok ())
     | None -> Error No_continuation)
   | Instruction.Halt ->
       tick vm;

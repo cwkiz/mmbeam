@@ -5,6 +5,6 @@ type t =
   | Add of { dst : int; left : int; right : int }
   | Label of label
   | Jump of { label : label }
-  | Call of { label : label }
+  | Call of { label : label; locals : int }
   | Ret
   | Halt
