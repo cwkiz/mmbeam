@@ -4,10 +4,11 @@ type error =
   | Invalid_x_register of int
   | Uninitialized_x_register of int
   | Type_error
+  | Unknown_label of Instruction.label
   | No_current_frame
-  | Unknown_label of int
   | No_continuation
-  | Frame_error of Frame.error
+  | Frame_error of Frame.error 
+  | Out_of_bounds of int
 
 type t = {
   x : Type.t option array;
@@ -15,11 +16,6 @@ type t = {
   mutable cp : address option;
   mutable frame : Frame.t option;
   mutable reductions : int;
-}
-
-type program = {
-  code : Instruction.t array;
-  labels : (int, int) Hashtbl.t;
 }
 
 let create ?(x_registers = 1024) () =
@@ -77,18 +73,7 @@ let advance vm =
   vm.ip <- vm.ip + 1;
   tick vm
 
-
-let load code =
-  let labels = Hashtbl.create 16 in
-  Array.iteri (fun i instruction ->
-    match instruction with
-    | Instruction.Label label -> Hashtbl.add labels label i
-    | _ -> ()
-  ) code;
-  { code; labels }
-
-
-let step vm program =
+let step (vm : t) (program : Program.program) =
   let instruction = program.code.(vm.ip) in
   match instruction with
   | Instruction.Load_int { dst; value } ->

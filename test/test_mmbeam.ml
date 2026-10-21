@@ -29,7 +29,7 @@ let run vm program =
 let () =
   let vm = Mmbeam.Vm.create () in
   let program =
-    Mmbeam.Vm.load
+    Mmbeam.Program.load
       [|
         Mmbeam.Instruction.Load_int {
           dst = 0;
@@ -60,7 +60,7 @@ let () =
 let () =
   let vm = Mmbeam.Vm.create () in
   let program =
-    Mmbeam.Vm.load
+    Mmbeam.Program.load
       [|
         Mmbeam.Instruction.Jump { label = 7 };
         Mmbeam.Instruction.Load_int {
@@ -87,7 +87,7 @@ let () =
 let () =
   let vm = Mmbeam.Vm.create () in
   let program =
-    Mmbeam.Vm.load
+    Mmbeam.Program.load
       [|
         Mmbeam.Instruction.Call { label = 10; locals = 1 };
         Mmbeam.Instruction.Halt;
@@ -125,7 +125,7 @@ let () =
   | None -> ()
   | Some _ -> failwith "continuation should be restored after returning");
   let no_continuation_vm = Mmbeam.Vm.create () in
-  let ret_program = Mmbeam.Vm.load [| Mmbeam.Instruction.Ret |] in
+  let ret_program = Mmbeam.Program.load [| Mmbeam.Instruction.Ret |] in
   (match Mmbeam.Vm.step no_continuation_vm ret_program with
   | Error Mmbeam.Vm.No_continuation -> ()
   | _ -> failwith "Ret without an active call should fail")
